@@ -1,0 +1,155 @@
+;************************************************* ******************************
+; CHUONG TRINH : DEM LEN XUONG 0000 - 9999 SU DUNG NUT BAM
+; ***********************************
+; MO TA :
+; - Phan cung :
+; + AT89s52 (thach anh 12MHz)
+; + 4 Led 7 Seg (Anot chung)
+; + 2 phim bam
+; - Ket noi :
+; + Switch UP noi voi p1.3
+; + Switch DOWN noi voi p1.7
+; + Cac thanh A-B-C-D-E-F-G cua Led 7 Seg lan luot noi voi p2.0, ... , p2.6
+; + Anot cua cac Led 1 den 4 (tinh tu trai sang) lan luot noi voi p0.0, ..., p0.3
+; - Chu thich :
+; + Cac Led tich cuc khi p0 o muc 0, OUTP o muc 0
+; + Cac phim tich cuc muc 0
+; - Ten file : Count_UP_0_9999.asm
+;************************************************* ******************************
+;
+;--------------------------------------------------------
+; C O N S T A N T ;
+;--------------------------------------------------------
+UP bit p1.3
+DOWN bit p1.7
+H_DV equ 30h
+H_CH equ 31h
+H_TR equ 32h
+H_NG equ 33h
+OUTP equ p2
+;
+org 0h
+mov dptr, #table
+mov r6, #0 ; dung 2 thanh ghi r6, r7 nhu 1 thanh ghi 16 bit de luu tru so
+mov r7, #0 ; lan bam nut, r7 byte cao, r6 byte thap
+;--------------------------------------------------------
+; MAIN: ;
+; Duy tri viec kiem tra phim bam va hien ;
+; thi ;
+;===============================
+; M A I N P R O G R A M ;
+;===============================
+main:
+call display
+;
+jb UP, skip ; ko an UP: kiem tra xem co an DOWN ?
+call delay_10ms ; UP dc an: goi ct lam tre de chong rung phim
+jnb UP, $ ; chong giu phim UP
+call t_r76 ; goi chuong trinh tang so dem
+cjne r7, #100, main ; r7 < 100: tiep tuc hien thi
+mov r7, #0 ; r7 = 100: xoa r7 va cho hien thi lai so 0000
+sjmp main
+skip: jb DOWN, main
+call delay_10ms ; DOWN dc an: goi ct lam tre de chong rung phim
+jnb DOWN, $ ; chong giu phim DOWN
+call g_r76 ; goi chuong trinh giam so dem
+cjne r7, #255, main ; r7 > = 0: tiep tuc hien thi
+mov r7, #99 ; r7 = 255: dat r7 = 99 de hien thi so 9999
+sjmp main
+;--------------------------------------------------------
+display:
+; - Tinh toan va hien thi cac so len Led 7 ;
+; - Cac thanh ghi a, b bi anh huong ;
+;--------------------------------------------------------
+mov a, r7 ; dua byte cao vao a
+mov b, #10
+div ab ; chia a cho b, thuong luu vao a, phan du luu vao b
+movc a, @a+dptr ; lay ma led hang nghin
+mov H_NG, a ; cat ma led hang nghin
+mov a, b
+movc a, @a+dptr ; lay ma led hang tram
+mov H_TR, a ; cat ma led hang tram
+;-----------------------------------
+mov a, r6 ; dua byte thap vao a
+mov b, #10
+div ab ; chia a cho b, thuong luu vao a, phan du luu vao b
+movc a, @a+dptr ; lay ma led hang chuc
+mov H_CH, a ; cat ma led hang chuc
+mov a, b
+movc a, @a+dptr ; lay ma led hang don vi
+mov H_DV, a ; cat ma led hang don vi
+;
+call show
+ret
+;--------------------------------------------------------
+show:
+; - Hien thi cac so len Led 7 ;
+; - Su dung r0 lam con tro lay du lieu ;
+; gui ra p2, thanh ghi a tao xung quet ;
+;--------------------------------------------------------
+mov r0, #33h ; dia chi ngan nho hang nghin
+push acc
+push 00
+mov a, #11111110b ; khoi tao xung quet
+next: mov p0, a ; xuat xung quet
+rl a
+cjne a, #11011111b, next1 ; quet du 4 xung thi dung
+sjmp back
+next1: mov OUTP, @r0 ; xuat du lieu
+call delay_1ms ; goi chuong trinh lam tre de led sang
+mov OUTP, #0ffh ; tat led
+call delay_1ms
+dec r0 ; giam r0 de lay du lieu hien thi led tiep theo
+sjmp next
+back: pop 00
+pop acc
+ret
+;--------------------------------------------------------
+t_r76:
+; - Tang va kiem tra so lan bam nut ;
+;--------------------------------------------------------
+inc r6
+cjne r6, #100, t_not_e ; r6 < 100: tro ve ct chinh
+mov r6, #0 ; r6 = 100: xoa r6, tang r7 va tro ve ct chinh
+inc r7
+t_not_e: ret
+;--------------------------------------------------------
+g_r76:
+; - Giam va kiem tra so lan bam nut ;
+;--------------------------------------------------------
+dec r6 ; giam r6
+cjne r6, #255, g_not_e ; r6 >= 0: tro ve ct chinh
+mov r6, #99 ; r6 = 255: dat r6 = 99; giam r7 va tro ve ct chinh
+dec r7
+g_not_e: ret
+;--------------------------------------------------------
+; CHUONG TRINH CON TAO TRE ;
+;--------------------------------------------------------
+delay_1ms:
+push 00
+push 01
+MOV R0, #2
+MOV R1, #248
+DJNZ R1, $
+DJNZ R0, $-4
+POP 01
+POP 00
+ret
+;--------------------------------------------------------
+delay_10ms:
+push 00
+push 01
+MOV R0, #20
+MOV R1, #248
+DJNZ R1, $
+DJNZ R0, $-4
+POP 01
+POP 00
+ret
+;--------------------------------------------------------
+table:
+; 0 1 2 3 4 5 6 7 8 9
+; | | | | | | | | | |
+db 0c0h, 0f9h, 0a4h, 0b0h, 99h, 92h, 82h, 0f8h, 80h, 90h
+;===============================
+end
