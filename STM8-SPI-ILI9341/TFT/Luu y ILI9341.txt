@@ -1,0 +1,1 @@
+Khi lap trinh ILI9341 phai RESET bang HARDWARE moi giao tiep duoc(Da test boi ESP8266 NodeMCU)
